@@ -40,6 +40,7 @@ export class RedisSubscriber implements Subscriber {
                 try {
                     message = JSON.parse(message);
 
+                    Log.info("REDIS LOG INFO");
                     if (this.options.devMode) {
                         Log.info("Channel: " + channel);
                         Log.info("Event: " + message.event);

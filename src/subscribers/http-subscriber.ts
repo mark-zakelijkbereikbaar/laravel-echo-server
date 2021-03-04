@@ -85,8 +85,10 @@ export class HttpSubscriber implements Subscriber {
                 Log.info("Event: " + message.event);
             }
 
+            Log.info("Presentation 01");
             if(message.event.endsWith('_presentation')){
                 //create presentation
+                Log.info("Presentation 02");
                 this.presentationHandler.addPresentation({});
             }
 

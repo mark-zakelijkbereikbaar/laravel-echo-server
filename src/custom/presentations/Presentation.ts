@@ -1,5 +1,3 @@
-import { reject } from "lodash";
-
 export class Presentation {
     //interval    
     currentTimeout = null;
