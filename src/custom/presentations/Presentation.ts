@@ -11,6 +11,7 @@ export class Presentation {
     startLoop(timeout){
         this.currentTimeout = setTimeout(() => {
             //EMIT
+            console.log('LOOPING!!!');
             this.startLoop(timeout);
         }, timeout);
     }
