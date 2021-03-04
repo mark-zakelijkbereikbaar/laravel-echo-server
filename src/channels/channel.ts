@@ -2,6 +2,8 @@ import { PresenceChannel } from './presence-channel';
 import { PrivateChannel } from './private-channel';
 import { Log } from './../log';
 
+var _ = require("lodash");
+
 export class Channel {
     /**
      * Channels and patters for private channels.
@@ -82,7 +84,7 @@ export class Channel {
             socket.leave(channel);
 
             if (this.options.devMode) {
-                Log.info(`[${new Date().toISOString()}] - ${socket.id} left channel: ${channel} (${reason})`);
+                Log.info(`[${new Date().toLocaleTimeString()}] - ${socket.id} left channel: ${channel} (${reason})`);
             }
         }
     }
@@ -109,11 +111,22 @@ export class Channel {
             socket.join(data.channel);
 
             if (this.isPresence(data.channel)) {
-                var member = res.channel_data;
+                var member = {
+                    ...res.channel_data, 
+                    user_info: {
+                        ...res.channel_data.user_info,
+                        location: ''
+                    }
+                };
                 try {
-                    member = JSON.parse(res.channel_data);
+                    member = JSON.parse({
+                        ...res.channel_data, 
+                        user_info: {
+                            ...res.channel_data.user_info,
+                            location: ''
+                        }
+                    });
                 } catch (e) { }
-
                 this.presence.join(socket, data.channel, member);
             }
 
@@ -140,7 +153,7 @@ export class Channel {
      */
     onJoin(socket: any, channel: string): void {
         if (this.options.devMode) {
-            Log.info(`[${new Date().toISOString()}] - ${socket.id} joined channel: ${channel}`);
+            Log.info(`[${new Date().toLocaleTimeString()}] - ${socket.id} joined channel: ${channel}`);
         }
     }
 
@@ -164,4 +177,69 @@ export class Channel {
     isInChannel(socket: any, channel: string): boolean {
         return !!socket.rooms[channel];
     }
+
+
+    locationChange(socket: any, data: any): void {
+        try {
+            data = JSON.parse(data);
+        } catch (e) {
+            data = data;
+        }
+
+        if (data.channel) {
+            if (this.isPresence(data.channel) && this.isInChannel(socket, data.channel)) {
+                let members = this.presence.getMembers(data.channel).then((members) => {
+                    members = members || [];
+                    let member = members.find((member) => member.socketId == socket.id);
+                    // console.log(`members_1`);
+                    // console.log(members);
+                    // console.log(data);
+
+                    let newMembers = members.filter((l_member) => l_member.socketId !== member.socketId);
+                    newMembers.push({
+                        ...member,
+                        user_info: {
+                            ...member.user_info,
+                            // location: data.data,
+                            location: {
+                                location: data.data,
+                                time: Math.floor(new Date().getTime() / 1000)
+                            }
+                        }
+                    });
+
+                    this.presence.db.set(data.channel + ":members", newMembers);
+
+                    let newLocations = {};
+                    newMembers.map((mem) => {
+                        if(typeof(newLocations[mem.user_id]) == 'undefined'){
+                            newLocations[mem.user_id] = {};
+                        }
+                        newLocations[mem.user_id][mem.socketId] = mem.user_info.location;
+                    });
+
+                    newMembers = _.uniqBy(newMembers.reverse(), "user_id");
+                    
+                    let finalMembers = [];
+                    newMembers.map((newMember) => {
+                        finalMembers.push({
+                            ...newMember,
+                            user_info: {
+                                ...newMember.user_info,
+                                location: newLocations[newMember.user_id] ? newLocations[newMember.user_id] : {} 
+                            }
+                        })
+                    });
+                    this.io.to(data.channel).emit("location", data.channel, finalMembers);
+                });
+            }
+        }
+    }
+
+    onDisconnect(socket: any, channel: string){
+        if(this.isPresence(channel)){
+            this.presence.onDisconnect(socket, channel);
+        }
+    }
+
 }

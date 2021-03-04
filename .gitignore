@@ -4,3 +4,4 @@ examples/
 npm-debug.log
 yarn-error.log
 .idea/
+bin/laravel-echo-server.json

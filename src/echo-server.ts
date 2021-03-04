@@ -3,9 +3,12 @@ import { Channel } from './channels';
 import { Server } from './server';
 import { HttpApi } from './api';
 import { Log } from './log';
+import { PresentationHandler } from './custom/presentations/PresentationHandler';
 import * as fs from 'fs';
 const packageFile = require('../package.json');
 const { constants } = require('crypto');
+
+var _ = require("lodash");
 
 /**
  * Echo server class.
@@ -44,6 +47,10 @@ export class EchoServer {
             allowOrigin: '',
             allowMethods: '',
             allowHeaders: ''
+        },
+        hooks: {
+            join: null,
+            leave: null
         }
     };
 
@@ -72,6 +79,8 @@ export class EchoServer {
      */
     private httpApi: HttpApi;
 
+    private presentationHandler: PresentationHandler;
+
     /**
      * Create a new instance.
      */
@@ -80,6 +89,8 @@ export class EchoServer {
     /**
      * Start the Echo Server.
      */
+
+    //first call !!!
     run(options: any): Promise<any> {
         return new Promise((resolve, reject) => {
             this.options = Object.assign(this.defaultOptions, options);
@@ -102,14 +113,17 @@ export class EchoServer {
         return new Promise((resolve, reject) => {
             this.channel = new Channel(io, this.options);
 
+            this.presentationHandler = new PresentationHandler(this.broadcast);
+
             this.subscribers = [];
             if (this.options.subscribers.http)
-                this.subscribers.push(new HttpSubscriber(this.server.express, this.options));
+                this.subscribers.push(new HttpSubscriber(this.server.express, this.options, this.presentationHandler));
             if (this.options.subscribers.redis)
                 this.subscribers.push(new RedisSubscriber(this.options));
 
             this.httpApi = new HttpApi(io, this.channel, this.server.express, this.options.apiOriginAllow);
             this.httpApi.init();
+
 
             this.onConnect();
             this.listen().then(() => resolve(), err => Log.error(err));
@@ -208,6 +222,7 @@ export class EchoServer {
             this.onUnsubscribe(socket);
             this.onDisconnecting(socket);
             this.onClientEvent(socket);
+            this.onLocationChange(socket);
         });
     }
 
@@ -237,6 +252,9 @@ export class EchoServer {
             Object.keys(socket.rooms).forEach(room => {
                 if (room !== socket.id) {
                     this.channel.leave(socket, room, reason);
+                    
+                    //custom
+                    this.channel.onDisconnect(socket, room);
                 }
             });
         });
@@ -250,4 +268,11 @@ export class EchoServer {
             this.channel.clientEvent(socket, data);
         });
     }
+
+    onLocationChange(socket: any): void {
+        socket.on('location', data => {
+            this.channel.locationChange(socket, data);
+        });
+    }
+
 }

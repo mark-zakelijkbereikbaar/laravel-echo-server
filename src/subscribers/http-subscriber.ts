@@ -8,7 +8,7 @@ export class HttpSubscriber implements Subscriber {
      *
      * @param  {any} express
      */
-    constructor(private express, private options) { }
+    constructor(private express, private options, private presentationHandler) { }
 
     /**
      * Subscribe to events to broadcast.
@@ -84,6 +84,12 @@ export class HttpSubscriber implements Subscriber {
                 Log.info("Channel: " + channels.join(', '));
                 Log.info("Event: " + message.event);
             }
+
+            if(message.event.endsWith('_presentation')){
+                //create presentation
+                this.presentationHandler.addPresentation({});
+            }
+
 
             channels.forEach(channel => broadcast(channel, message));
         } else {

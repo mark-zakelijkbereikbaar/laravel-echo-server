@@ -1,5 +1,7 @@
 import { Database } from './../database';
 import { Log } from './../log';
+import axios from 'axios';
+
 var _ = require("lodash");
 
 export class PresenceChannel {
@@ -31,9 +33,7 @@ export class PresenceChannel {
                 (members) => {
                     this.removeInactive(channel, members, member).then(
                         (members: any) => {
-                            let search = members.filter(
-                                (m) => m.user_id == member.user_id
-                            );
+                            let search = members.filter((m) => m.user_id == member.user_id);
 
                             if (search && search.length) {
                                 resolve(true);
@@ -92,9 +92,21 @@ export class PresenceChannel {
                         member.socketId = socket.id;
                         members.push(member);
 
+                        if(this.options.hooks.join){
+                            axios.post(this.options.hooks.join, {
+                                uid: member.user_info.uid,
+                                socket: member.socketId
+                            })
+                            .then((response) => {
+                            })
+                            .catch((error) => {
+                                Log.error(error);
+                            });
+                        }
+
                         this.db.set(channel + ":members", members);
 
-                        members = _.uniqBy(members.reverse(), "user_id");
+                        // members = _.uniqBy(members.reverse(), "user_id");
 
                         this.onSubscribed(socket, channel, members);
 
@@ -122,6 +134,19 @@ export class PresenceChannel {
                 let member = members.find(
                     (member) => member.socketId == socket.id
                 );
+
+                if(this.options.hooks.leave){
+                    axios.post(this.options.hooks.leave, {
+                        uid: member.user_info.uid,
+                        socket: member.socketId
+                    })
+                    .then((response) => {
+                    })
+                    .catch((error) => {
+                        Log.error(error);
+                    });
+                }
+
                 members = members.filter((m) => m.socketId != member.socketId);
 
                 this.db.set(channel + ":members", members);
@@ -141,6 +166,8 @@ export class PresenceChannel {
      * On join event handler.
      */
     onJoin(socket: any, channel: string, member: any): void {
+        // delete member.user_info.location;
+        member.user_info.location = {};
         this.io.sockets.connected[socket.id].broadcast
             .to(channel)
             .emit("presence:joining", channel, member);
@@ -150,6 +177,8 @@ export class PresenceChannel {
      * On leave emitter.
      */
     onLeave(channel: string, member: any): void {
+        // delete member.user_info.location;
+        // member.user_info.location = {};
         this.io.to(channel).emit("presence:leaving", channel, member);
     }
 
@@ -157,6 +186,61 @@ export class PresenceChannel {
      * On subscribed event emitter.
      */
     onSubscribed(socket: any, channel: string, members: any[]) {
-        this.io.to(socket.id).emit("presence:subscribed", channel, members);
+        let newLocations = {};
+        members.map((mem) => {
+            if(typeof(newLocations[mem.user_id]) == 'undefined'){
+                newLocations[mem.user_id] = {};
+            }
+            newLocations[mem.user_id][mem.socketId] = mem.user_info.location;
+        });
+
+        members = _.uniqBy(members.reverse(), "user_id");
+        let finalMembers = [];
+        members.map((newMember) => {
+            finalMembers.push({
+                ...newMember,
+                user_info: {
+                    ...newMember.user_info,
+                    location: newLocations[newMember.user_id] ? newLocations[newMember.user_id] : {} 
+                }
+            })
+        });
+        this.io.to(socket.id).emit("presence:subscribed", channel, finalMembers);
     }
+
+    onDisconnect(socket: any, channel: string){
+        //custom
+        // socket.leave(room);
+        this.getMembers(channel).then((members) => {
+            members = members || [];
+            let member = members.find((member) => member.socketId == socket.id);
+            members = members.filter((m) => m.socketId != member.socketId);
+        
+            this.db.set(channel + ":members", members);
+
+            let newLocations = {};
+            members.map((mem) => {
+                if(typeof(newLocations[mem.user_id]) == 'undefined'){
+                    newLocations[mem.user_id] = {};
+                }
+                newLocations[mem.user_id][mem.socketId] = mem.user_info.location;
+            });
+
+            members = _.uniqBy(members.reverse(), "user_id");
+            let finalMembers = [];
+            members.map((newMember) => {
+                finalMembers.push({
+                    ...newMember,
+                    user_info: {
+                        ...newMember.user_info,
+                        location: newLocations[newMember.user_id] ? newLocations[newMember.user_id] : {} 
+                    }
+                })
+            });
+            this.io.to(channel).emit("location", channel, finalMembers);
+        });
+        //custom
+
+    }
+
 }
