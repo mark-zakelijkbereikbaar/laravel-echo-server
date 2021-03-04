@@ -117,7 +117,7 @@ export class EchoServer {
 
             this.subscribers = [];
             if (this.options.subscribers.http)
-                this.subscribers.push(new HttpSubscriber(this.server.express, this.options, this.presentationHandler));
+                this.subscribers.push(new HttpSubscriber(this.server.express, this.options));
             if (this.options.subscribers.redis)
                 this.subscribers.push(new RedisSubscriber(this.options));
 
@@ -167,6 +167,12 @@ export class EchoServer {
         return new Promise((resolve, reject) => {
             let subscribePromises = this.subscribers.map(subscriber => {
                 return subscriber.subscribe((channel, message) => {
+                    
+                    //Presentation ding
+                    if(message.event.endsWith('_presentation')){
+                        this.presentationHandler.presentationEvent(channel, message);
+                    }
+                    
                     return this.broadcast(channel, message);
                 });
             });

@@ -1,8 +1,17 @@
+import { Slide } from './Slide';
+
 export class Presentation {
     //interval    
     currentTimeout = null;
+    
+    uid: string;
+    running: boolean;
+    slides: Slide[];
 
-    constructor(presentation){
+    constructor(uid: string, running: boolean){
+        this.uid = uid;
+        this.running = running;
+        
         this.startLoop(1000);
     }
 
