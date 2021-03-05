@@ -51,9 +51,9 @@ export class Presentation {
             }
 
             if(duration){
-                Log.info(`Broodkast: Presentation: ${this.uid} | slideIndex: ${this.currentSlide} | duration: ${duration}`);
+                // Log.info(`Broodkast: Presentation: ${this.uid} | slideIndex: ${this.currentSlide} | duration: ${duration}`);
                 this.device_user_uids.map((device_user_uid) => {
-                    Log.info(`Broodkast: Presentation: ${this.uid} | slideIndex: ${this.currentSlide} | duration: ${duration} | device: ${device_user_uid}`);
+                    // Log.info(`Broodkast: Presentation: ${this.uid} | slideIndex: ${this.currentSlide} | duration: ${duration} | device: ${device_user_uid}`);
                     this.broadcast(`private-personal.${device_user_uid}`, {
                         event: `set_presentation_slide`,
                         data: {
@@ -72,7 +72,9 @@ export class Presentation {
     }
 
     destroy(){
-        clearTimeout(this.currentTimeout);
+        if(this.currentTimeout){
+            clearTimeout(this.currentTimeout);
+        }
     }
 
 }

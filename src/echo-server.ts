@@ -192,12 +192,6 @@ export class EchoServer {
      * Broadcast events to channels from subscribers.
      */
     broadcast(channel: string, message: any): boolean {
-
-        console.log(JSON.stringify({
-            channel: channel,
-            event: message.event
-        }));
-
         if (message.socket && this.find(message.socket)) {
             return this.toOthers(this.find(message.socket), channel, message);
         } else {

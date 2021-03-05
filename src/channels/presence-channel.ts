@@ -93,17 +93,15 @@ export class PresenceChannel {
                         members.push(member);
 
                         if(this.options.hooks.join){
-                            if(member.user_info.uid){
-                                axios.post(this.options.hooks.join, {
-                                    uid: member.user_info.uid,
-                                    socket: member.socketId
-                                })
-                                .then((response) => {
-                                })
-                                .catch((error) => {
-                                    Log.error(error);
-                                });
-                            }
+                            axios.post(this.options.hooks.join, {
+                                uid: member.user_info.uid,
+                                socket: member.socketId
+                            })
+                            .then((response) => {
+                            })
+                            .catch((error) => {
+                                Log.error(error);
+                            });
                         }
 
                         this.db.set(channel + ":members", members);
@@ -138,17 +136,15 @@ export class PresenceChannel {
                 );
 
                 if(this.options.hooks.leave){
-                    if(member.user_info.uid){
-                        axios.post(this.options.hooks.leave, {
-                            uid: member.user_info.uid,
-                            socket: member.socketId
-                        })
-                        .then((response) => {
-                        })
-                        .catch((error) => {
-                            Log.error(error);
-                        });
-                    }
+                    axios.post(this.options.hooks.leave, {
+                        uid: member.user_info.uid,
+                        socket: member.socketId
+                    })
+                    .then((response) => {
+                    })
+                    .catch((error) => {
+                        Log.error(error);
+                    });
                 }
 
                 members = members.filter((m) => m.socketId != member.socketId);

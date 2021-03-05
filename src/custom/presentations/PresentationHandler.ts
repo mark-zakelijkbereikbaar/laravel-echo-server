@@ -46,11 +46,10 @@ export class PresentationHandler {
 
         presentation.destroy();
         this.presentations.splice(presentationIndex, 1);
-        //push ???
     }
 
     presentationEvent(message: any): void {
-        Log.info(JSON.stringify(message));
+        // Log.info(JSON.stringify(message));
 
         if(message.event === 'update_presentation'){
             this.updatePresentation(message.data.data.response);
