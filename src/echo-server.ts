@@ -113,7 +113,7 @@ export class EchoServer {
         return new Promise((resolve, reject) => {
             this.channel = new Channel(io, this.options);
 
-            this.presentationHandler = new PresentationHandler(this.broadcast);
+            this.presentationHandler = new PresentationHandler((channel, message) => this.broadcast(channel, message));
 
             this.subscribers = [];
             if (this.options.subscribers.http)
@@ -170,7 +170,7 @@ export class EchoServer {
                     
                     //Presentation ding
                     if(message.event.endsWith('_presentation')){
-                        this.presentationHandler.presentationEvent(channel, message);
+                        this.presentationHandler.presentationEvent(message);
                     }
                     
                     return this.broadcast(channel, message);
